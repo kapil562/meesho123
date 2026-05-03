@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from "react";
-import { ChevronDown, CreditCard, Wallet, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { useLocation } from "react-router-dom";
 
-const MERCHANT_UPI_ID = "paytm.s1zwjh8@pty";
+const MERCHANT_UPI_ID = "paytm.s1zwjh8@pty"; // 👉 ensure valid UPI
 const COUNTRY_CURRENCY = "INR";
 
 const PaymentPage = () => {
@@ -19,38 +19,36 @@ const PaymentPage = () => {
     );
   }
 
-  // ✅ UPI Params (Correct Format)
+  // ✅ Correct UPI Params
   const baseParams = useMemo(() => {
-    const tid = `ORDER:${product.id}`;
+    const txnId = `TXN${Date.now()}`;
     return new URLSearchParams({
       pa: MERCHANT_UPI_ID,
       pn: "Meesho",
-      am: finalPrice?.toString() || "0",
+      am: finalPrice && finalPrice > 0 ? finalPrice.toString() : "1",
       cu: COUNTRY_CURRENCY,
       tn: "Order Payment",
-      tr: tid,
+      tr: txnId,
     }).toString();
-  }, [finalPrice, product.id]);
+  }, [finalPrice]);
 
-  // ✅ Correct PhonePe Deep Link
-  const paymentLinks = {
-    phonepe: `phonepe://upi/pay?${baseParams}`,
-  };
-
+  // ✅ Payment Handler (PhonePe + Fallback)
   const handlePayClick = () => {
     if (!selectedPayment) {
-      alert("Please select a payment method first!");
+      alert("Please select payment method");
       return;
     }
 
-    const paymentUrl = paymentLinks[selectedPayment];
+    const phonepeUrl = `phonepe://upi/pay?${baseParams}`;
+    const upiUrl = `upi://pay?${baseParams}`;
 
-    if (paymentUrl) {
-      // ✅ Redirect to PhonePe
-      window.location.href = paymentUrl;
-    } else {
-      alert("Payment method not supported!");
-    }
+    // 👉 Try PhonePe first
+    window.location.href = phonepeUrl;
+
+    // 👉 Fallback to UPI (works in all apps)
+    setTimeout(() => {
+      window.location.href = upiUrl;
+    }, 1200);
   };
 
   return (
@@ -72,7 +70,7 @@ const PaymentPage = () => {
         </div>
 
         {/* Offer */}
-        <div className="mx-4 mt-4 bg-pink-50 border border-pink-200 rounded-lg p-4">
+        <div className="mx-4 mt-4 bg-pink-50 border rounded-lg p-3">
           <p className="text-pink-600 font-semibold">
             Pay online & get EXTRA ₹25 off
           </p>
@@ -80,16 +78,18 @@ const PaymentPage = () => {
 
         {/* PhonePe Option */}
         <div className="p-4">
-          <p className="text-xs text-gray-500 font-semibold mb-3">PAY ONLINE</p>
+          <p className="text-xs text-gray-500 font-semibold mb-3">
+            PAY ONLINE
+          </p>
 
-          <div className="border rounded-lg mb-3">
+          <div className="border rounded-lg">
             <button
               onClick={() =>
                 setSelectedPayment(
                   selectedPayment === "phonepe" ? "" : "phonepe"
                 )
               }
-              className={`w-full flex items-center justify-between p-4 ${
+              className={`w-full flex justify-between items-center p-4 ${
                 selectedPayment === "phonepe"
                   ? "bg-pink-50"
                   : "hover:bg-gray-50"
@@ -101,7 +101,7 @@ const PaymentPage = () => {
                   alt="PhonePe"
                   className="w-8 h-8"
                 />
-                <span className="text-sm font-medium">PhonePe</span>
+                <span className="font-medium">PhonePe</span>
               </div>
 
               <input
@@ -113,18 +113,18 @@ const PaymentPage = () => {
           </div>
         </div>
 
-        {/* Price Details */}
-        <div className="px-4 pb-4 border-t pt-4">
-          <h3 className="text-base font-semibold mb-3">
+        {/* Price */}
+        <div className="px-4 border-t pt-4">
+          <h3 className="font-semibold mb-2">
             Price Details ({quantity} item{quantity > 1 ? "s" : ""})
           </h3>
 
-          <div className="flex justify-between mb-2">
-            <span>Total Product Price</span>
+          <div className="flex justify-between text-sm">
+            <span>Total</span>
             <span>₹{finalPrice}</span>
           </div>
 
-          <div className="flex justify-between pt-3 border-t font-bold">
+          <div className="flex justify-between font-bold mt-2 border-t pt-2">
             <span>Order Total</span>
             <span>₹{finalPrice}</span>
           </div>
@@ -134,7 +134,7 @@ const PaymentPage = () => {
         <div className="p-4 border-t">
           <button
             onClick={handlePayClick}
-            className="w-full bg-pink-500 hover:bg-pink-600 text-white py-4 rounded-lg"
+            className="w-full bg-pink-500 hover:bg-pink-600 text-white py-4 rounded-lg font-semibold"
           >
             PROCEED TO PAY ₹{finalPrice}
           </button>
