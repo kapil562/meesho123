@@ -2,7 +2,7 @@ import React, { useState, useMemo } from "react";
 import { ChevronDown, CreditCard, Wallet, ShieldCheck } from "lucide-react";
 import { useLocation } from "react-router-dom";
 
-const MERCHANT_UPI_ID = "paytm.s1jy71g@pty";
+const MERCHANT_UPI_ID = "paytm.slzwjh8@pty";
 const COUNTRY_CURRENCY = "INR";
 
 const PaymentPage = () => {
