@@ -2,15 +2,14 @@ import React, { useState, useMemo } from "react";
 import { ChevronDown, CreditCard, Wallet, ShieldCheck } from "lucide-react";
 import { useLocation } from "react-router-dom";
 
-const MERCHANT_UPI_ID = "paytm.s1jy71g@pty";
+const MERCHANT_UPI_ID = "paytm.s1jy71g@pty"; // 👉 ensure VALID UPI ID
 const COUNTRY_CURRENCY = "INR";
 
 const PaymentPage = () => {
   const location = useLocation();
-  const { product, selectedSize, quantity, finalPrice } = location.state || {};
+  const { product, quantity, finalPrice } = location.state || {};
 
   const [selectedPayment, setSelectedPayment] = useState("");
-  const [isReselling, setIsReselling] = useState(false);
 
   if (!product) {
     return (
@@ -20,7 +19,7 @@ const PaymentPage = () => {
     );
   }
 
-  // ✅ FIXED UPI PARAMS
+  // ✅ Correct UPI params (VERY IMPORTANT)
   const baseParams = useMemo(() => {
     const txnId = `TXN${Date.now()}`;
     return new URLSearchParams({
@@ -33,35 +32,17 @@ const PaymentPage = () => {
     }).toString();
   }, [finalPrice]);
 
-  // ✅ FIXED LINKS (PhonePe + fallback)
-  const paymentLinks = {
-    phonepe: `phonepe://upi/pay?${baseParams}`,
-    fallback: `upi://pay?${baseParams}`,
-  };
+  // ✅ Universal UPI link (PhonePe will open if installed/default)
+  const upiLink = `upi://pay?${baseParams}`;
 
-  // ✅ FIXED HANDLER
   const handlePayClick = () => {
     if (!selectedPayment) {
       alert("Please select a payment method first!");
       return;
     }
 
-    if (selectedPayment === "paytm") {
-      alert("Paytm currently unavailable. Please use PhonePe.");
-      return;
-    }
-
-    if (selectedPayment === "phonepe") {
-      // 👉 Try PhonePe first
-      window.location.href = paymentLinks.phonepe;
-
-      // 👉 Fallback to UPI (important)
-      setTimeout(() => {
-        window.location.href = paymentLinks.fallback;
-      }, 1200);
-    } else {
-      alert("This payment method is not supported yet!");
-    }
+    // 👉 Direct UPI intent
+    window.location.href = upiLink;
   };
 
   return (
@@ -89,18 +70,21 @@ const PaymentPage = () => {
           </p>
         </div>
 
-        {/* Pay Online */}
+        {/* PhonePe Option */}
         <div className="p-4">
           <p className="text-xs text-gray-500 font-semibold mb-3">PAY ONLINE</p>
 
-          {/* PhonePe */}
           <div className="border rounded-lg mb-3">
             <button
               onClick={() =>
-                setSelectedPayment(selectedPayment === "phonepe" ? "" : "phonepe")
+                setSelectedPayment(
+                  selectedPayment === "phonepe" ? "" : "phonepe"
+                )
               }
               className={`w-full flex items-center justify-between p-4 ${
-                selectedPayment === "phonepe" ? "bg-pink-50" : "hover:bg-gray-50"
+                selectedPayment === "phonepe"
+                  ? "bg-pink-50"
+                  : "hover:bg-gray-50"
               }`}
             >
               <div className="flex items-center gap-3">
@@ -113,6 +97,7 @@ const PaymentPage = () => {
                   PhonePe
                 </span>
               </div>
+
               <input
                 type="radio"
                 checked={selectedPayment === "phonepe"}
@@ -120,79 +105,20 @@ const PaymentPage = () => {
               />
             </button>
           </div>
-
-          {/* Paytm */}
-          <div className="border rounded-lg mb-3">
-            <button
-              onClick={() =>
-                setSelectedPayment(selectedPayment === "paytm" ? "" : "paytm")
-              }
-              className={`w-full flex items-center justify-between p-4 ${
-                selectedPayment === "paytm" ? "bg-pink-50" : "hover:bg-gray-50"
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <img
-                  src="https://kurtikk.diwalioffer.shop/static/media/paytm_icon-icons.com_62778.a23c686df5f6d427a319.png"
-                  alt="Paytm"
-                  className="w-8 h-8"
-                />
-                <span className="text-sm font-medium text-gray-800">
-                  Paytm
-                </span>
-              </div>
-              <input
-                type="radio"
-                checked={selectedPayment === "paytm"}
-                readOnly
-              />
-            </button>
-
-            {selectedPayment === "paytm" && (
-              <p className="text-xs text-red-500 px-4 py-2">
-                Paytm currently unavailable. Please use PhonePe.
-              </p>
-            )}
-          </div>
-
-          {/* Cards Disabled */}
-          <div className="border rounded-lg mb-3 bg-gray-50">
-            <button className="w-full flex justify-between p-4 opacity-50 cursor-not-allowed">
-              <div className="flex items-center gap-3">
-                <CreditCard className="w-6 h-6 text-blue-500" />
-                <span>Debit/Credit Cards ( Not Available )</span>
-              </div>
-              <ChevronDown />
-            </button>
-          </div>
         </div>
 
-        {/* COD Disabled */}
-        <div className="px-4 pb-4">
-          <p className="text-xs text-gray-500 font-semibold mb-3">PAY IN CASE</p>
-          <div className="border rounded-lg bg-gray-50">
-            <button className="w-full flex justify-between p-4 opacity-50 cursor-not-allowed">
-              <div className="flex items-center gap-3">
-                <Wallet className="w-6 h-6 text-blue-500" />
-                <span>Cash on Delivery ( Not Available )</span>
-              </div>
-              <ChevronDown />
-            </button>
-          </div>
-        </div>
-
-        {/* Price */}
+        {/* Price Details */}
         <div className="px-4 pb-4 border-t pt-4">
-          <h3 className="font-semibold mb-2">
+          <h3 className="text-base font-semibold mb-3">
             Price Details ({quantity} item{quantity > 1 ? "s" : ""})
           </h3>
 
-          <div className="flex justify-between">
+          <div className="flex justify-between mb-2">
             <span>Total Product Price</span>
             <span>₹{finalPrice}</span>
           </div>
 
-          <div className="flex justify-between font-bold mt-2 border-t pt-2">
+          <div className="flex justify-between font-bold border-t pt-2">
             <span>Order Total</span>
             <span>₹{finalPrice}</span>
           </div>
@@ -202,11 +128,12 @@ const PaymentPage = () => {
         <div className="p-4 border-t">
           <button
             onClick={handlePayClick}
-            className="w-full bg-pink-500 text-white py-4 rounded-lg"
+            className="w-full bg-pink-500 hover:bg-pink-600 text-white py-4 rounded-lg"
           >
             PROCEED TO PAY ₹{finalPrice}
           </button>
         </div>
+
       </div>
     </div>
   );
