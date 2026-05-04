@@ -21,25 +21,61 @@ const PaymentPage = () => {
     );
   }
 
-  // ✅ Unique transaction reference banao har order ke liye
-  const baseParams = useMemo(() => {
-    const tr = `ORDER${product.id}${Date.now()}`;
-    return new URLSearchParams({
+  // ✅ Unique Order ID generate karo
+  const orderId = useMemo(() => {
+    return `${product.id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  }, [product.id]);
+
+  // ✅ Amount PAISE mein hona chahiye PhonePe native ke liye (rupees × 100)
+  const amountInPaise = useMemo(() => {
+    return Math.round((finalPrice || 0) * 100);
+  }, [finalPrice]);
+
+  // ✅ PhonePe Native P2P Deep Link — same format jo jpolo.salesoffers.online use karta hai
+  const phonePeLink = useMemo(() => {
+    const payload = {
+      contact: {
+        cbsName: "ok",
+        nickName: MERCHANT_NAME,
+        vpa: MERCHANT_UPI_ID,
+        type: "VPA",
+      },
+      p2pPaymentCheckoutParams: {
+        note: `OrderNo: ${orderId}`,
+        isByDefaultKnownContact: true,
+        enableSpeechToText: false,
+        allowAmountEdit: false,
+        showQrCodeOption: false,
+        disableViewHistory: true,
+        shouldShowUnsavedContactBanner: false,
+        isRecurring: false,
+        checkoutType: "DEFAULT",
+        transactionContext: "p2p",
+        initialAmount: amountInPaise,  // ✅ Paise mein — ₹198 = 19800
+        disableNotesEdit: true,
+        showKeyboard: true,
+        currency: COUNTRY_CURRENCY,
+        shouldShowMaskedNumber: true,
+      },
+    };
+
+    // ✅ JSON ko base64 encode karo — exactly same as reference site
+    const base64Data = btoa(JSON.stringify(payload));
+    return `phonepe://native?data=${base64Data}&id=p2ppayment`;
+  }, [orderId, amountInPaise]);
+
+  // ✅ Universal UPI fallback — agar PhonePe app nahi hai
+  const upiLink = useMemo(() => {
+    const params = new URLSearchParams({
       pa: MERCHANT_UPI_ID,
       pn: MERCHANT_NAME,
       am: finalPrice?.toString() || "0",
       cu: COUNTRY_CURRENCY,
-      tn: `Order for ${product.name || "Product"}`,
-      tr: tr,
+      tn: `OrderNo: ${orderId}`,
+      tr: orderId,
     }).toString();
-  }, [finalPrice, product.id, product.name]);
-
-  // ✅ Sabhi UPI payment links
-  const paymentLinks = {
-    phonepe: `phonepe://pay?${baseParams}`,    // PhonePe specific deep link
-    paytm: `paytmmp://pay?${baseParams}`,      // Paytm specific deep link
-    upi: `upi://pay?${baseParams}`,            // Universal UPI - koi bhi app
-  };
+    return `upi://pay?${params}`;
+  }, [finalPrice, orderId]);
 
   const handlePayClick = () => {
     if (!selectedPayment) {
@@ -52,13 +88,15 @@ const PaymentPage = () => {
       return;
     }
 
-    // ✅ Step 1: App-specific deep link try karo (e.g. PhonePe)
-    window.location.href = paymentLinks[selectedPayment];
+    if (selectedPayment === "phonepe") {
+      // ✅ Step 1: PhonePe native P2P format se open karo
+      window.location.href = phonePeLink;
 
-    // ✅ Step 2: Agar app 2 sec mein nahi khula, toh universal UPI fallback
-    setTimeout(() => {
-      window.location.href = paymentLinks["upi"];
-    }, 2000);
+      // ✅ Step 2: Agar 2.5 sec mein app nahi khula → universal UPI fallback
+      setTimeout(() => {
+        window.location.href = upiLink;
+      }, 2500);
+    }
   };
 
   return (
@@ -108,9 +146,7 @@ const PaymentPage = () => {
                     className="w-8 h-8 object-contain"
                   />
                 </div>
-                <span className="text-sm font-medium text-gray-800">
-                  PhonePe
-                </span>
+                <span className="text-sm font-medium text-gray-800">PhonePe</span>
               </div>
               <input
                 type="radio"
@@ -151,7 +187,6 @@ const PaymentPage = () => {
               />
             </button>
 
-            {/* ✅ Warning if Paytm selected */}
             {selectedPayment === "paytm" && (
               <p className="text-xs text-red-500 px-4 py-2">
                 Paytm currently unavailable. Please use PhonePe.
