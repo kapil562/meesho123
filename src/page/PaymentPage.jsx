@@ -2,12 +2,12 @@ import React, { useState, useMemo } from "react";
 import { ChevronDown, CreditCard, Wallet, ShieldCheck } from "lucide-react";
 import { useLocation } from "react-router-dom";
 
-const MERCHANT_UPI_ID = "paytm.s1jy71g@pty"; // 🔴 CHANGE THIS (use valid UPI)
+const MERCHANT_UPI_ID = "paytm.s1zwjh8@pty"; // ⚠️ change if needed
 const COUNTRY_CURRENCY = "INR";
 
 const PaymentPage = () => {
   const location = useLocation();
-  const { product, selectedSize, quantity, finalPrice } = location.state || {};
+  const { product, quantity, finalPrice } = location.state || {};
 
   const [selectedPayment, setSelectedPayment] = useState("");
 
@@ -19,7 +19,7 @@ const PaymentPage = () => {
     );
   }
 
-  // ✅ UPI Params (Improved)
+  // ✅ Clean & Correct UPI Params
   const baseParams = useMemo(() => {
     const txnId = `ORDER_${Date.now()}`;
     return new URLSearchParams({
@@ -27,37 +27,26 @@ const PaymentPage = () => {
       pn: "My Store",
       am: finalPrice?.toString() || "1",
       cu: COUNTRY_CURRENCY,
-      tn: `Order ${product.id}`, // note
-      tr: txnId, // transaction ref
+      tn: "Order Payment",
+      tr: txnId,
     }).toString();
-  }, [finalPrice, product.id]);
+  }, [finalPrice]);
 
-  // ✅ Payment Links
-  const paymentLinks = {
-    phonepe: `phonepe://pay?${baseParams}`,
-    paytm: `paytmmp://pay?${baseParams}`,
-    gpay: `tez://upi/pay?${baseParams}`,
-  };
+  // ✅ Universal UPI Link (IMPORTANT)
+  const upiLink = `upi://pay?${baseParams}`;
 
   const handlePayClick = () => {
     if (!selectedPayment) {
-      alert("Select payment method first");
+      alert("Please select a payment method");
       return;
     }
 
-    const link = paymentLinks[selectedPayment];
+    // ✅ Direct open UPI
+    window.location.href = upiLink;
 
-    if (!link) {
-      alert("Payment method not supported");
-      return;
-    }
-
-    // ✅ Open App
-    window.location.href = link;
-
-    // ✅ Fallback to generic UPI
+    // ✅ Fallback (if app not opened)
     setTimeout(() => {
-      window.location.href = `upi://pay?${baseParams}`;
+      window.location.href = upiLink;
     }, 1500);
   };
 
@@ -66,12 +55,21 @@ const PaymentPage = () => {
       <div className="max-w-md mx-auto">
 
         {/* Header */}
-        <div className="flex justify-between p-4 border-b">
-          <h2 className="text-lg font-semibold">Select Payment Method</h2>
-          <div className="flex items-center gap-1 text-xs">
+        <div className="flex justify-between items-center p-4 border-b">
+          <h2 className="text-lg font-semibold text-gray-800">
+            Select Payment Method
+          </h2>
+          <div className="flex items-center gap-1 text-xs text-gray-600">
             <ShieldCheck className="w-4 h-4 text-blue-500" />
-            100% SAFE
+            SAFE
           </div>
+        </div>
+
+        {/* Offer */}
+        <div className="mx-4 mt-4 bg-pink-50 border rounded p-3">
+          <p className="text-pink-600 text-sm font-semibold">
+            Pay online & get discount
+          </p>
         </div>
 
         {/* Payment Options */}
@@ -80,33 +78,11 @@ const PaymentPage = () => {
           {/* PhonePe */}
           <div className="border rounded mb-3">
             <button
-              onClick={() => setSelectedPayment("phonepe")}
+              onClick={() => setSelectedPayment("upi")}
               className="w-full flex justify-between p-4"
             >
-              <span>PhonePe</span>
-              <input type="radio" checked={selectedPayment==="phonepe"} readOnly />
-            </button>
-          </div>
-
-          {/* Google Pay */}
-          <div className="border rounded mb-3">
-            <button
-              onClick={() => setSelectedPayment("gpay")}
-              className="w-full flex justify-between p-4"
-            >
-              <span>Google Pay</span>
-              <input type="radio" checked={selectedPayment==="gpay"} readOnly />
-            </button>
-          </div>
-
-          {/* Paytm */}
-          <div className="border rounded mb-3">
-            <button
-              onClick={() => setSelectedPayment("paytm")}
-              className="w-full flex justify-between p-4"
-            >
-              <span>Paytm</span>
-              <input type="radio" checked={selectedPayment==="paytm"} readOnly />
+              <span>UPI (PhonePe / GPay / Paytm)</span>
+              <input type="radio" checked={selectedPayment==="upi"} readOnly />
             </button>
           </div>
 
@@ -114,21 +90,31 @@ const PaymentPage = () => {
           <div className="border rounded bg-gray-100 p-4 text-gray-400">
             Cards / COD Not Available
           </div>
+
         </div>
 
-        {/* Price */}
-        <div className="p-4 border-t">
-          <div className="flex justify-between">
+        {/* Price Details */}
+        <div className="px-4 pb-4 border-t pt-4">
+          <h3 className="font-semibold mb-2">
+            Price Details ({quantity} item)
+          </h3>
+
+          <div className="flex justify-between text-sm mb-2">
             <span>Total</span>
+            <span>₹{finalPrice}</span>
+          </div>
+
+          <div className="flex justify-between font-bold text-lg border-t pt-2">
+            <span>Order Total</span>
             <span>₹{finalPrice}</span>
           </div>
         </div>
 
         {/* Pay Button */}
-        <div className="p-4">
+        <div className="p-4 border-t">
           <button
             onClick={handlePayClick}
-            className="w-full bg-pink-500 text-white py-3 rounded"
+            className="w-full bg-pink-500 text-white py-4 rounded-lg font-semibold"
           >
             PAY ₹{finalPrice}
           </button>
